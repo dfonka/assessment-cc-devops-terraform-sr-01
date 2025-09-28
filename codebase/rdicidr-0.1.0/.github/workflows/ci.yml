@@ -1,0 +1,53 @@
+name: CI Pipeline
+
+on: 
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+    branches:
+      - '**'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps: 
+     - name: Check out code
+       uses: actions/checkout@v2
+
+     - name: Set up Node.js
+       uses: actions/setup-node@v2
+       with:
+        node-version: '14'
+
+     - name: Install dependencies
+       run: npm install
+
+     - name: Run linter
+       run: npm run lint
+
+     - name: Run formatter
+       run: |
+       
+         npx  prettier ./src/ --write
+         if [-n "$git status --porcelain"]:then
+          echo "prettier formatted files.please run prettier locally and commit git diff>prettier.patch || true
+          exit 1
+         fi
+
+     - name: upload prettier patch(if any)
+       if: failure()
+       uses: action/upload-artifact@v4
+       with:
+          name: prettier.patch
+          path: prettier.patch
+
+     - name: Run tests
+       env: 
+        CI: true
+       run: npm run test
+
+     - name: Build project
+       run: npm run build
